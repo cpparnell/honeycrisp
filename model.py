@@ -6,7 +6,7 @@ import mlx
 import mlx.core as mx
 import mlx.nn as nn
 import mlx.optimizers as optim
-
+import torch
 # Download Dataset TODO TODO TODO Remove from here???
 dataset = load_dataset("tatsu-lab/alpaca")
 
@@ -35,6 +35,36 @@ class mxUtils:
         new_shape = list(matrix.shape)
         new_shape.insert(dim, 1)
         return mx.reshape(matrix, new_shape)
+
+    @staticmethod
+    def masked_fill(matrix: mx.array, mask: bool, value: float) -> mx.array:
+        """
+        Replaces all values in matrix where mask is True with value
+        
+        This is very crude so matrix MUST be 4-dimensional (as it should be for our purposes)
+        """
+        # broadcast mask to size of matrix
+        masked_matrix = matrix
+        matrix_dims = matrix.shape
+        if len(matrix_dims) != 4:
+            raise Exception(f"this implementation of masked_fill can only handle 4 dimensional matrices! You provided a matrix of shape: {matrix.shape}")
+        broad_mask = mx.broadcast_to(mask, matrix.shape)
+        for i in range(matrix_dims[0]):
+            for j in range(matrix_dims[1]):
+                for k in range(matrix_dims[2]):
+                    for l in range(matrix_dims[3]):
+                        if broad_mask[i][j][k][l].item() == True:
+                            masked_matrix[i, j, k, l] = value
+        return masked_matrix
+
+
+        # # invert mask
+        # # we are doing this because we will be using boolean values (0 and 1) in multiplication
+        # # and currently, the indices we want to change in broad_mask are 1, and the indices we
+        # # do NOT want to change are 0. To apply the mask, we must invert this.       
+        # inverted_mask = mx.logical_not(broad_mask).astype(matrix.dtype)
+        # # matrix * inverted mask will make numbers we want changed == 0, 
+        # return matrix * inverted_mask + broad_mask * value
 
 class GPTConfig:
     
@@ -113,21 +143,22 @@ class MultiheadAttention(nn.Module):
         self.mask = mxUtils.unsqueeze(mxUtils.unsqueeze(mxUtils.tril(mx.ones([config.max_len, config.max_len])), 0), 0)
     
     def __call__(self, x):
-        batch_size = x[0].shape[0]
-        seq_len = x[1].shape[0]
+        batch_size = x.shape[0]
+        seq_len = x.shape[1]
+        # TODO k_t should be PERMUTED not TRANSPOSED
         k_t = mx.transpose(self.key(x).reshape(batch_size, seq_len, self.num_heads, -1), axes=[0, 2, 3, 1])
         v = mx.transpose(mx.reshape(self.value(x), [batch_size, seq_len, self.num_heads, -1]), axes=[0, 2, 1, 3])
         q = mx.transpose(mx.reshape(self.query(x), [batch_size, seq_len, self.num_heads, -1]), axes=[0, 2, 1, 3])
         
         attn = mx.matmul(q, k_t) / math.sqrt(q[-1].shape[0])
         mask = self.mask[:, :, :seq_len, :seq_len]
-        attn = attn.masked_fill(mask == 0, float("-inf")) # TODO START HERE: figure out how to replace this shit
+        attn = mxUtils.masked_fill(attn, mask == 0, float("-inf")) # TODO START HERE: figure out how to replace this shit
         attn = self.attn_dropout(attn)
         attn = mx.softmax(attn, axis=-1)
         
         y = mx.matmul(attn, v)
-        y = y.transpose(1, 2)
-        y = y.reshape(batch_size, seq_len, -1)
+        y = mx.transpose(y, axes=[0, 2, 1, 3])
+        y = mx.reshape(y, [batch_size, seq_len, -1])
         y = self.proj_dropout(self.proj(y))
         return y
 
@@ -144,6 +175,6 @@ seq_len = 6
 
 test_input = mx.random.randint(low=0, high=vocab_size, shape=[batch_size, seq_len])
 try:
-    print(model(test_input).shape)
+    print(model(test_input).shape) # You should see an output of size [batch_size, seq_len, vocab_size]!s
 except AssertionError as e:
     print(e)
