@@ -1,2 +1,2 @@
 # honeycrisp 🍎
-GPT built on Apple's mlx array framework for machine learning
+miniGPT built on Apple's MLX framework
