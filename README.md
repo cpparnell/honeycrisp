@@ -1,2 +1,2 @@
 # honeycrisp 🍎
-miniGPT built on Apple's MLX framework
+miniGPT chatbot built on Apple's MLX array framework
