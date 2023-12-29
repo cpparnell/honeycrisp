@@ -1,16 +1,7 @@
-import pickle
 import math
-from collections import defaultdict
-from datasets import load_dataset
-import mlx
 import mlx.core as mx
 import mlx.nn as nn
-import mlx.optimizers as optim
-import torch
-# Download Dataset TODO TODO TODO Remove from here???
-dataset = load_dataset("tatsu-lab/alpaca")
 
-import mlx.core as mx
 
 class mxUtils:
    
@@ -57,15 +48,6 @@ class mxUtils:
                             masked_matrix[i, j, k, l] = value
         return masked_matrix
 
-
-        # # invert mask
-        # # we are doing this because we will be using boolean values (0 and 1) in multiplication
-        # # and currently, the indices we want to change in broad_mask are 1, and the indices we
-        # # do NOT want to change are 0. To apply the mask, we must invert this.       
-        # inverted_mask = mx.logical_not(broad_mask).astype(matrix.dtype)
-        # # matrix * inverted mask will make numbers we want changed == 0, 
-        # return matrix * inverted_mask + broad_mask * value
-
 class GPTConfig:
     
     attn_dropout = 0.1
@@ -80,7 +62,7 @@ class GPTConfig:
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-class GPT1Config(GPTConfig):
+class GPTCustomConfig(GPTConfig):
     
     num_heads = 12
     num_blocks = 12
@@ -162,19 +144,19 @@ class MultiheadAttention(nn.Module):
         y = self.proj_dropout(self.proj(y))
         return y
 
-# Using the GPT model!
+# # Using the GPT model!
 
-vocab_size = 10
-max_len = 12
+# vocab_size = 10
+# max_len = 12
 
-config = GPT1Config(vocab_size, max_len)
-model = GPT(config)
+# config = GPTCustomConfig(vocab_size, max_len)
+# model = GPT(config)
 
-batch_size = 3
-seq_len = 6
+# batch_size = 3
+# seq_len = 6
 
-test_input = mx.random.randint(low=0, high=vocab_size, shape=[batch_size, seq_len])
-try:
-    print(model(test_input).shape) # You should see an output of size [batch_size, seq_len, vocab_size]!s
-except AssertionError as e:
-    print(e)
+# test_input = mx.random.randint(low=0, high=vocab_size, shape=[batch_size, seq_len])
+# try:
+#     print(model(test_input).shape) # You should see an output of size [batch_size, seq_len, vocab_size]!s
+# except AssertionError as e:
+#     print(e)
