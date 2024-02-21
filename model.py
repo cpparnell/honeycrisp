@@ -2,7 +2,6 @@ import math
 import mlx.core as mx
 import mlx.nn as nn
 
-
 class mxUtils:
    
     @staticmethod
@@ -81,7 +80,7 @@ class GPT(nn.Module):
         self.fc = nn.Linear(embed_dim, config.vocab_size)
     
     def __call__(self, x, target=None):
-        seq_len = x[1].shape[0]
+        seq_len = x.shape[1]
         assert seq_len <= self.max_len, f"Sequence of length {seq_len} longer than max of {self.max_len}!"
         tok_embedding = self.tok_embed(x)
         pos_embedding = self.pos_embed[:, :seq_len, :]
@@ -144,7 +143,6 @@ class MultiheadAttention(nn.Module):
         y = self.proj_dropout(self.proj(y))
         return y
 
-# # Using the GPT model!
 
 # vocab_size = 10
 # max_len = 12
